@@ -1,0 +1,14 @@
+{
+	"id": "Kpina-mod",
+	"name": "Kpina Mod",
+	"display_name": "Kpina Mod",
+	"author": ["kripusek", "Szymon(kostnica)"],
+	"description": "Mod based on kpina youtube channel and the kpina discord server/ Mod bazowany na kanale youtube kpina oraz serwerze discord kpina",
+	"prefix": "kmod",
+	"main_file": "main.lua",
+	"priority": 0,
+	"badge_colour": "ff99cb",
+	"badge_text_colour": "00cd34",
+	"version": "1.0.0",
+	"dependencies": []
+}
