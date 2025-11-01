@@ -25,45 +25,106 @@ SMODS.Joker {
     end,
 
     calculate = function(self, card, context)
-        if context.individual and context.cardarea == G.play and not context.blueprint then
-            local scored_card = context.other_card
-            if not scored_card.debuff then
-                if scored_card:is_face() then
-                    card.ability.extra.mult = card.ability.extra.mult - 1
-                    return {
-                        card_eval_status_text(card, 'extra', nil, nil, nil, {
-                            message = "-1",
-                            colour = G.C.RED
-                        }),
-                    }
-                else
-                    card.ability.extra.mult = card.ability.extra.mult + 0.5
-                    return {
-                        card_eval_status_text(card, 'extra', nil, nil, nil, {
-                            message = "+0.5",
-                            colour = G.C.MULT
-                        }),
-                    }
+        -- End of round: eat adjacent Food Jokers
+        if context.end_of_round and not context.blueprint then
+            local food_jokers = {
+                'j_egg',
+                'j_ice_cream',
+                'j_popcorn',
+                'j_ramen',
+                'j_seltzer',
+                'j_diet_cola',
+                'j_gros_michel',
+                'j_cavendish',
+                'j_obelisk'  -- Bean's internal name
+            }
+
+            -- Find rzempik's position in jokers array
+            local my_index = nil
+            for i = 1, #G.jokers.cards do
+                if G.jokers.cards[i] == card then
+                    my_index = i
+                    break
                 end
             end
-        end
 
-        if context.before and context.main_eval and not context.blueprint then
-            for i = 1, #context.scoring_hand do
-                local scored_card = context.scoring_hand[i]
-                if not scored_card.debuff then
-                    if scored_card:is_face() then
-                        card.ability.extra.mult = card.ability.extra.mult - 1
-                    else
-                        card.ability.extra.mult = card.ability.extra.mult + 0.5
+            if my_index then
+                local eaten_count = 0
+                local jokers_to_destroy = {}
+
+                -- Check left adjacent joker (index - 1)
+                if my_index > 1 then
+                    local left_joker = G.jokers.cards[my_index - 1]
+                    if left_joker and left_joker.config.center.key then
+                        for _, food_key in ipairs(food_jokers) do
+                            if left_joker.config.center.key == food_key then
+                                -- Check if eternal
+                                if not left_joker.ability.eternal then
+                                    eaten_count = eaten_count + 1
+                                    table.insert(jokers_to_destroy, left_joker)
+                                end
+                                break
+                            end
+                        end
                     end
                 end
+
+                -- Check right adjacent joker (index + 1)
+                if my_index < #G.jokers.cards then
+                    local right_joker = G.jokers.cards[my_index + 1]
+                    if right_joker and right_joker.config.center.key then
+                        for _, food_key in ipairs(food_jokers) do
+                            if right_joker.config.center.key == food_key then
+                                -- Check if eternal
+                                if not right_joker.ability.eternal then
+                                    eaten_count = eaten_count + 1
+                                    table.insert(jokers_to_destroy, right_joker)
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+
+                -- Destroy eaten jokers and apply mult gain
+                if eaten_count > 0 then
+                    -- Destroy jokers
+                    for _, joker in ipairs(jokers_to_destroy) do
+                        joker:start_dissolve()
+                    end
+
+                    -- Play sound effect
+                    play_sound('rzempik', 1, 0.4)
+
+                    -- Calculate mult gain
+                    local mult_gain = 0
+                    local message = ""
+                    if eaten_count == 2 then
+                        mult_gain = 2.5
+                        message = "+X2.5"
+                    elseif eaten_count == 1 then
+                        mult_gain = 4
+                        message = "+X4"
+                    end
+
+                    -- Apply mult gain
+                    card.ability.extra.xmult = card.ability.extra.xmult + mult_gain
+
+                    -- Show visual feedback
+                    return {
+                        card_eval_status_text(card, 'extra', nil, nil, nil, {
+                            message = message,
+                            colour = G.C.MULT
+                        })
+                    }
+                end
             end
         end
 
+        -- Apply multiplicative mult during scoring
         if context.joker_main then
             return {
-                mult = card.ability.extra.mult
+                Xmult = card.ability.extra.xmult
             }
         end
     end
